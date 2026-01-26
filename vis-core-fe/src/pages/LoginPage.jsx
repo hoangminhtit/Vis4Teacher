@@ -79,26 +79,26 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Teacher Code Input */}
                 <div>
-                <label htmlFor="teacherCode" className="block text-sm font-medium text-gray-700 mb-2">
-                    Mã số giáo viên
-                </label>
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-gray-400" />
+                    <label htmlFor="teacherCode" className="block text-sm font-medium text-gray-700 mb-2">
+                        Mã số giáo viên
+                    </label>
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <User className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                            id="teacherCode"
+                            name="teacherCode"
+                            type="text"
+                            required
+                            value={formData.teacherCode}
+                            onChange={handleInputChange}
+                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white
+                                    focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500
+                                    text-black font-medium placeholder-gray-400 transition-colors"
+                            placeholder="Nhập mã số giáo viên"
+                        />
                     </div>
-                    <input
-                        id="teacherCode"
-                        name="teacherCode"
-                        type="text"
-                        required
-                        value={formData.teacherCode}
-                        onChange={handleInputChange}
-                        className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white
-                                focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500
-                                text-black font-medium placeholder-gray-400 transition-colors"
-                        placeholder="Nhập mã số giáo viên"
-                    />
-                </div>
                 </div>
 
                 {/* Password Input */}
@@ -183,7 +183,7 @@ export default function LoginPage() {
             {/* Footer */}
             <div className="text-center">
                 <p className="text-xs text-gray-400">
-                    © 2024 VisForTeacher. Phát triển bởi Đại học Công nghiệp TP.HCM
+                    © 2026 VisForTeacher. Phát triển bởi Đại học Công nghiệp TP.HCM
                 </p>
             </div>
         </div>
