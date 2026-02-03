@@ -1,6 +1,6 @@
 import logo_iuh from "../assets/logo-iuh.jpg"
 
-export default function Navbar({ userName = "Nguyen Minh" }) {
+export default function Navbar({ userName }) {
   return (
     <nav className="w-full h-16 bg-white border-b shadow-sm px-6 flex items-center">
       
@@ -42,10 +42,10 @@ export default function Navbar({ userName = "Nguyen Minh" }) {
       {/* RIGHT: User */}
       <div className="flex items-center gap-1">
         <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
-          {userName.charAt(0).toUpperCase()}
+          {userName ? userName.charAt(0).toUpperCase() : 'U'}
         </div>
         <span className="text-gray-700 text-sm">
-          Xin chào, <span className="font-medium">{userName}</span>
+          Xin chào, <span className="font-medium">{userName || 'User'}</span>
         </span>
       </div>
 

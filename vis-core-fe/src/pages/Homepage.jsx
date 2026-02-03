@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from "../context/AuthContext"
 import Navbar from "../components/navBar.jsx";
 import Footer from "../components/Footer.jsx";
 import LeftSidebar from "../components/LeftSidebar.jsx";
@@ -10,6 +11,7 @@ import AboutUs from "../components/AboutUs.jsx";
 
 export default function Homepage() {
     const [activeItem, setActiveItem] = useState('classes');
+    const { user, logout } = useAuth()
 
     const renderMainContent = () => {
         switch (activeItem) {
@@ -31,7 +33,7 @@ export default function Homepage() {
     return (
         <>
         <div className="flex flex-col min-h-screen">
-            <Navbar />
+            <Navbar userName={user?.full_name || user?.username} />
             <div className="flex flex-grow">
                 <LeftSidebar activeItem={activeItem} setActiveItem={setActiveItem} />
                 <main className="flex-1 p-6 bg-gray-50">

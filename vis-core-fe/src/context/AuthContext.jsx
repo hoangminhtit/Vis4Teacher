@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { authAPI, getUserData } from '../services/api'
 
 const AuthContext = createContext({})
 
@@ -15,22 +16,19 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   // Check for existing token on mount
   useEffect(() => {
-    const token = localStorage.getItem('authToken')
-    const userData = localStorage.getItem('userData')
+    const userData = getUserData()
+    const isAuth = authAPI.isAuthenticated()
     
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData))
-        setIsAuthenticated(true)
-      } catch (err) {
-        console.error('Error parsing stored user data:', err)
-        localStorage.removeItem('authToken')
-        localStorage.removeItem('userData')
-      }
+    if (isAuth && userData) {
+      setUser(userData)
+      setIsAuthenticated(true)
     }
+    
+    setIsInitializing(false) // Finished checking authentication
   }, [])
 
   const login = async (credentials) => {
@@ -38,31 +36,14 @@ export const AuthProvider = ({ children }) => {
     setError(null)
 
     try {
-      // Make API call to backend
-      const response = await fetch('http://localhost:8000/api/auth/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials)
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Đăng nhập thất bại')
-      }
-
-      // Store token and user data
-      if (data.token) {
-        localStorage.setItem('authToken', data.token)
-        localStorage.setItem('userData', JSON.stringify(data.user))
-        setUser(data.user)
+      const response = await authAPI.login(credentials)
+      
+      if (response.user) {
+        setUser(response.user)
         setIsAuthenticated(true)
       }
 
-      return data
-
+      return response
     } catch (err) {
       const errorMessage = err.message || 'Có lỗi xảy ra khi đăng nhập'
       setError(errorMessage)
@@ -72,14 +53,41 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('userData')
-    setUser(null)
-    setIsAuthenticated(false)
+  const register = async (userData) => {
+    setIsLoading(true)
     setError(null)
-    // Redirect to login page after logout
-    window.location.href = '/login'
+
+    try {
+      const response = await authAPI.register(userData)
+      
+      // Sau khi đăng ký thành công, có thể tự động login hoặc redirect
+      if (response.user) {
+        setUser(response.user)
+        setIsAuthenticated(true)
+      }
+
+      return response
+    } catch (err) {
+      const errorMessage = err.message || 'Có lỗi xảy ra khi đăng ký'
+      setError(errorMessage)
+      throw new Error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await authAPI.logout()
+    } catch (err) {
+      console.error('Logout error:', err)
+    } finally {
+      setUser(null)
+      setIsAuthenticated(false)
+      setError(null)
+      // Redirect to login page after logout
+      window.location.href = '/login'
+    }
   }
 
   const clearError = () => {
@@ -90,8 +98,10 @@ export const AuthProvider = ({ children }) => {
     user,
     isAuthenticated,
     isLoading,
+    isInitializing,
     error,
     login,
+    register,
     logout,
     clearError
   }
@@ -103,4 +113,4 @@ export const AuthProvider = ({ children }) => {
   )
 }
 
-export default AuthContext
+export default AuthContext;

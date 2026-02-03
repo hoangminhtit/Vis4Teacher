@@ -1,0 +1,243 @@
+// API base configuration
+const API_BASE_URL = 'http://localhost:8000'
+
+// Helper function to get token from localStorage
+const getToken = () => localStorage.getItem('access_token')
+const getRefreshToken = () => localStorage.getItem('refresh_token')
+
+// Helper function to set tokens in localStorage
+const setTokens = (accessToken, refreshToken) => {
+  localStorage.setItem('access_token', accessToken)
+  localStorage.setItem('refresh_token', refreshToken)
+}
+
+// Helper function to remove tokens from localStorage
+const removeTokens = () => {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  localStorage.removeItem('user_data')
+}
+
+// Helper function to set user data
+const setUserData = (userData) => {
+  localStorage.setItem('user_data', JSON.stringify(userData))
+}
+
+// Helper function to get user data
+const getUserData = () => {
+  const userData = localStorage.getItem('user_data')
+  return userData ? JSON.parse(userData) : null
+}
+
+// Generic API request function with auto token refresh
+async function apiRequest(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`
+  const token = getToken()
+  
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+  }
+  
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`
+  }
+  
+  const config = {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  }
+  
+  try {
+    let response = await fetch(url, config)
+    
+    // If token expired, try to refresh
+    if (response.status === 401 && token) {
+      const refreshed = await refreshAuthToken()
+      if (refreshed) {
+        // Retry the original request with new token
+        config.headers['Authorization'] = `Bearer ${getToken()}`
+        response = await fetch(url, config)
+      } else {
+        // Refresh failed, redirect to login
+        removeTokens()
+        window.location.href = '/login'
+        throw new Error('Authentication failed')
+      }
+    }
+    
+    if (!response.ok) {
+      let errorData = {}
+      try {
+        errorData = await response.json()
+      } catch (jsonError) {
+        console.error('Failed to parse error response:', jsonError)
+      }
+      
+      // Chi tiết error message cho debugging
+      console.error('API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: errorData,
+        url: url
+      })
+      
+      // Tạo error message từ response
+      let errorMessage = `HTTP error! status: ${response.status}`
+      if (errorData.detail) {
+        errorMessage = errorData.detail
+      } else if (errorData.message) {
+        errorMessage = errorData.message
+      } else if (errorData.non_field_errors) {
+        errorMessage = errorData.non_field_errors.join(', ')
+      } else if (typeof errorData === 'object') {
+        // Nếu có validation errors từ Django serializer
+        const errors = Object.entries(errorData).map(([field, messages]) => {
+          const messageArray = Array.isArray(messages) ? messages : [messages]
+          return `${field}: ${messageArray.join(', ')}`
+        })
+        if (errors.length > 0) {
+          errorMessage = errors.join('; ')
+        }
+      }
+      
+      throw new Error(errorMessage)
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.error('API Request failed:', error)
+    throw error
+  }
+}
+
+// Authentication API functions
+export const authAPI = {
+  // Login user
+  async login(credentials) {
+    try {
+      const response = await apiRequest('/api/auth/login/', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      })
+      
+      if (response.tokens) {
+        setTokens(response.tokens.access, response.tokens.refresh)
+        setUserData(response.user)
+      }
+      
+      return response
+    } catch (error) {
+      throw new Error(error.message || 'Login failed')
+    }
+  },
+
+  // Register new user
+  async register(userData) {
+    try {
+      // Clean data - chỉ gửi fields cần thiết, loại bỏ password_confirm
+      const cleanData = {
+        username: userData.username,
+        email: userData.email,
+        full_name: userData.full_name || '',
+        phone: userData.phone || '',
+        password: userData.password,
+        password_confirm: userData.password_confirm
+      }
+      
+      console.log('Sending registration data:', cleanData) // Debug log
+      
+      const response = await apiRequest('/api/auth/register/', {
+        method: 'POST',
+        body: JSON.stringify(cleanData),
+      })
+      
+      if (response.tokens) {
+        setTokens(response.tokens.access, response.tokens.refresh)
+        setUserData(response.user)
+      }
+      
+      return response
+    } catch (error) {
+      console.error('Registration API error:', error)
+      throw new Error(error.message || 'Registration failed')
+    }
+  },
+
+  // Logout user
+  async logout() {
+    try {
+      const refreshToken = getRefreshToken()
+      if (refreshToken) {
+        await apiRequest('/api/auth/logout/', {
+          method: 'POST',
+          body: JSON.stringify({ refresh: refreshToken }),
+        })
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      removeTokens()
+    }
+  },
+
+  // Get current user profile
+  async getProfile() {
+    return await apiRequest('/api/user/profile/')
+  },
+
+  // Update user profile
+  async updateProfile(profileData) {
+    return await apiRequest('/api/user/profile/', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    })
+  },
+
+  // Check if user is authenticated
+  isAuthenticated() {
+    return !!getToken()
+  },
+
+  // Get current user data from localStorage
+  getCurrentUser() {
+    return getUserData()
+  },
+}
+
+// Refresh token function
+async function refreshAuthToken() {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return false
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh: refreshToken }),
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      localStorage.setItem('access_token', data.access)
+      return true
+    }
+    
+    return false
+  } catch (error) {
+    console.error('Token refresh failed:', error)
+    return false
+  }
+}
+
+// Export utility functions for direct use
+export { getToken, getRefreshToken, getUserData, removeTokens, setUserData }
+
+// Health check
+export async function healthCheck() {
+  return await apiRequest('/api/health/')
+}
