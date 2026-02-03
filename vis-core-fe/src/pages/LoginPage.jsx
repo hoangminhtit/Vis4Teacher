@@ -1,16 +1,24 @@
-import { Lock, User, Eye, EyeOff } from "lucide-react"
+import { Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react"
 import logoIUH from "../assets/logo-iuh.jpg"
 import logoVis from "../assets/logo-vis.jpg"
 import { useState } from "react"
+import { useAuth } from "../context/AuthContext"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
-    teacherCode: '',
+    username: '',
     password: '',
     remember: false
   })
-  const [loading, setLoading] = useState(false)
+  
+  const { login, isLoading, error, clearError } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Get return URL from location state
+  const from = location.state?.from?.pathname || '/dashboard'
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -18,18 +26,32 @@ export default function LoginPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
+    
+    // Clear error when user starts typing
+    if (error) {
+      clearError()
+    }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Login data:', formData)
-      setLoading(false)
-      // Handle login logic here
-    }, 1500)
+    if (!formData.username || !formData.password) {
+      return
+    }
+
+    try {
+      await login({
+        username: formData.username,
+        password: formData.password
+      })
+      
+      // Navigate to return URL or home page
+      navigate(from, { replace: true })
+    } catch (error) {
+      // Error is handled by AuthContext
+      console.error('Login failed:', error)
+    }
   }
 
   return (
@@ -77,26 +99,37 @@ export default function LoginPage() {
 
           {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Teacher Code Input */}
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+                        <AlertCircle className="h-5 w-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" />
+                        <div>
+                            <h3 className="text-sm font-medium text-red-800">Lỗi đăng nhập</h3>
+                            <p className="text-sm text-red-600 mt-1">{error}</p>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Username Input */}
                 <div>
-                    <label htmlFor="teacherCode" className="block text-sm font-medium text-gray-700 mb-2">
-                        Mã số giáo viên
+                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                        Tên đăng nhập
                     </label>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <User className="h-5 w-5 text-gray-400" />
                         </div>
                         <input
-                            id="teacherCode"
-                            name="teacherCode"
+                            id="username"
+                            name="username"
                             type="text"
                             required
-                            value={formData.teacherCode}
+                            value={formData.username}
                             onChange={handleInputChange}
                             className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white
                                     focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500
                                     text-black font-medium placeholder-gray-400 transition-colors"
-                            placeholder="Nhập mã số giáo viên"
+                            placeholder="Nhập tên đăng nhập"
                         />
                     </div>
                 </div>
@@ -162,23 +195,33 @@ export default function LoginPage() {
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={isLoading || !formData.username || !formData.password}
                     className="group relative w-full flex justify-center py-3 px-4 border border-transparent 
                             text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 
                             focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500
                             disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200
                             transform hover:scale-[1.02] active:scale-[0.98]"
                 >
-                {loading ? (
+                {isLoading ? (
                     <div className="flex items-center">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Đang xử lý...
+                        Đang đăng nhập...
                     </div>
                 ) : (
                     'Đăng nhập'
                 )}
                 </button>
             </form>
+
+            {/* Register Link */}
+            <div className="text-center">
+                <p className="text-sm text-gray-600">
+                    Chưa có tài khoản?{' '}
+                    <Link to="/register" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors">
+                        Đăng ký ngay
+                    </Link>
+                </p>
+            </div>
 
             {/* Footer */}
             <div className="text-center">
