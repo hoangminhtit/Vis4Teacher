@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User, TeacherProfile
+from .models import User, Teacher, UniversityClass, Student
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
@@ -48,14 +48,35 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'full_name', 'phone', 'date_joined']
         read_only_fields = ['id', 'date_joined']
 
-class TeacherProfileSerializer(serializers.ModelSerializer):
+class TeacherSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     
     class Meta:
-        model = TeacherProfile
-        fields = ['user', 'school', 'subject', 'experience_years']
+        model = Teacher
+        fields = ['user', 'teacher_id', 'teacher_fullname', 'year_of_birth', 
+                 'academic_title', 'major', 'gender', 'gender_display', 
+                 'number_of_current_class', 'phone_number']
 
-class UserSerializer(serializers.Serializer):
+class UniversityClassSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    
     class Meta:
-        model = User
-        fields = ['username', 'password']
+        model = UniversityClass
+        fields = ['class_name', 'number_of_student', 'class_major', 
+                 'teacher_note', 'total_credit', 'status', 'status_display', 'total_semester']
+        
+class UniversityClassCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UniversityClass
+        fields = ['class_name', 'number_of_student', 'class_major', 
+                 'teacher_note', 'total_credit', 'total_semester']
+
+class StudentSerializer(serializers.ModelSerializer):
+    class_name_display = serializers.CharField(source='class_name.class_name', read_only=True)
+    
+    class Meta:
+        model = Student
+        fields = ['student_id', 'class_name', 'class_name_display', 'student_name', 
+                 'student_gmail', 'passed_credit', 'score_10', 'score_4', 
+                 'score_char', 'is_graduated']

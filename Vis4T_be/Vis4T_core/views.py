@@ -6,17 +6,19 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import status, generics
 from django.contrib.auth import authenticate, login, logout
-from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from .serializers import (
     UserRegistrationSerializer, 
     UserLoginSerializer, 
     UserSerializer, 
-    TeacherProfileSerializer
+    TeacherSerializer,
+    UniversityClassSerializer,
+    StudentSerializer
 )
-from .models import User, TeacherProfile
+from .models import User, Teacher, UniversityClass, Student
 
 # Create your views here.
 
@@ -131,3 +133,84 @@ class RefreshTokenView(APIView):
             return Response({
                 'error': 'Invalid refresh token'
             }, status=status.HTTP_401_UNAUTHORIZED)
+
+# Class Management Views
+class ClassListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UniversityClassSerializer
+    
+    def get_queryset(self):
+        # Lấy hoặc tạo Teacher record
+        try:
+            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+        except Teacher.DoesNotExist:
+            # Tạo Teacher record tự động nếu chưa có
+            teacher = Teacher.objects.create(
+                teacher_id=self.request.user.id,
+                teacher_fullname=self.request.user.full_name or self.request.user.username,
+                year_of_birth=1990,  # default value
+                academic_title="Giảng viên", 
+                major="Chưa xác định",
+                gender="O",
+                number_of_current_class=0,
+                phone_number="",
+                user=self.request.user
+            )
+        return UniversityClass.objects.filter(teacher_id=teacher.teacher_id)
+    
+    def perform_create(self, serializer):
+        try:
+            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+            serializer.save(teacher_id=teacher.teacher_id)
+        except Teacher.DoesNotExist:
+            # Tạo Teacher record tự động nếu chưa có
+            teacher = Teacher.objects.create(
+                teacher_id=self.request.user.id,
+                teacher_fullname=self.request.user.full_name or self.request.user.username,
+                year_of_birth=1990,  # default value
+                academic_title="Giảng viên", 
+                major="Chưa xác định",
+                gender="O",
+                number_of_current_class=0,
+                phone_number="",
+                user=self.request.user
+            )
+            serializer.save(teacher_id=teacher.teacher_id)
+
+class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UniversityClassSerializer
+    lookup_field = 'class_name'
+    
+    def get_queryset(self):
+        try:
+            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+        except Teacher.DoesNotExist:
+            # Tạo Teacher record tự động nếu chưa có
+            teacher = Teacher.objects.create(
+                teacher_id=self.request.user.id,
+                teacher_fullname=self.request.user.full_name or self.request.user.username,
+                year_of_birth=1990,  # default value
+                academic_title="Giảng viên", 
+                major="Chưa xác định",
+                gender="O",
+                number_of_current_class=0,
+                phone_number="",
+                user=self.request.user
+            )
+        return UniversityClass.objects.filter(teacher_id=teacher.teacher_id)
+
+class ClassStudentsView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = StudentSerializer
+    
+    def get_queryset(self):
+        class_name = self.kwargs['class_name']
+        try:
+            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+            return Student.objects.filter(
+                class_name__class_name=class_name,
+                class_name__teacher_id=teacher.teacher_id
+            )
+        except Teacher.DoesNotExist:
+            return Student.objects.none()
