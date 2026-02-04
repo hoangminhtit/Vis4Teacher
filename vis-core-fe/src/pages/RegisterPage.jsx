@@ -37,14 +37,19 @@ const RegisterPage = () => {
     e.preventDefault()
     
     if (formData.password !== formData.password_confirm) {
+      setFormData(prev => ({ ...prev, password_confirm: '' }))
       return
     }
 
     try {
       await register(formData)
-      navigate('/dashboard')
+      // Chuyển đến trang login sau khi đăng ký thành công
+      navigate('/login', { 
+        state: { message: 'Đăng ký thành công! Vui lòng đăng nhập.' }
+      })
     } catch (error) {
       console.error('Registration failed:', error)
+      // Error đã được set trong AuthContext, không cần làm gì thêm
     }
   }
 
@@ -318,4 +323,4 @@ const RegisterPage = () => {
   )
 }
 
-export default RegisterPage
+export default RegisterPage;
