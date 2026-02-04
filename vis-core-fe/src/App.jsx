@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from "./pages/LoginPage"
 import Dashboard from "./pages/Dashboard"
-import HomePage from './pages/HomePage'
+import Homepage from './pages/Homepage'
 import { AuthProvider } from "./context/AuthContext"
 import ProtectedRoute from './components/ProtectedRoute'
 import './index.css'
@@ -21,7 +21,32 @@ function App() {
           {/* Protected routes - require authentication */}
           <Route path="/home" element={
             <ProtectedRoute>
-              <HomePage />
+              <Homepage />
+            </ProtectedRoute>
+          } />
+          <Route path="/home/:classCode" element={
+            <ProtectedRoute>
+              <Homepage />
+            </ProtectedRoute>
+          } />
+          <Route path="/updateClass" element={
+            <ProtectedRoute>
+              <Homepage />
+            </ProtectedRoute>
+          } />
+          <Route path="/addClass" element={
+            <ProtectedRoute>
+              <Homepage />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Homepage />
+            </ProtectedRoute>
+          } />
+          <Route path="/about" element={
+            <ProtectedRoute>
+              <Homepage />
             </ProtectedRoute>
           } />
           <Route path="/dashboard" element={

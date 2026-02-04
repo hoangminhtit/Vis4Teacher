@@ -1,9 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { classAPI } from '../services/api';
 
-export default function LeftSidebar({ activeItem, setActiveItem }) {
+export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, newClassAdded, onClassSelect }) {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [expandedItems, setExpandedItems] = useState(new Set());
+    const [classes, setClasses] = useState([]);
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    // Effect để lắng nghe khi có lớp mới được thêm
+    useEffect(() => {
+        if (newClassAdded) {
+            fetchClasses();
+        }
+    }, [newClassAdded]);
+
+    // Fetch classes from API
+    useEffect(() => {
+        if (expandedItems.has('classes') || expandedItems.has('updateClass')) {
+            fetchClasses();
+        }
+    }, [expandedItems]);
+
+    const fetchClasses = async () => {
+        try {
+            setLoading(true);
+            const response = await classAPI.getClasses();
+            setClasses(response || []);
+        } catch (error) {
+            console.error('Error fetching classes:', error);
+            // Fallback to default classes
+            setClasses([
+                { class_name: 'DHKHDL17A' },
+                { class_name: 'DHKHMT18B' },
+                { class_name: 'DHKTPM19A' },
+                { class_name: 'DHCNTT20B' }
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleLogout = () => {
         // Xóa thông tin xác thực từ localStorage/sessionStorage
@@ -87,11 +124,69 @@ export default function LeftSidebar({ activeItem, setActiveItem }) {
 
     const handleItemClick = (itemId) => {
         if (itemId === 'logout') {
-        setShowLogoutModal(true);
+            setShowLogoutModal(true);
+        } else if (itemId === 'classes') {
+            navigate('/home');
+            // Toggle expand/collapse cho menu có submenu
+            const newExpanded = new Set(expandedItems);
+            if (expandedItems.has(itemId)) {
+                newExpanded.delete(itemId);
+            } else {
+                newExpanded.add(itemId);
+            }
+            setExpandedItems(newExpanded);
+        } else if (itemId === 'updateClass') {
+            navigate('/updateClass');
+            // Toggle expand/collapse cho menu có submenu
+            const newExpanded = new Set(expandedItems);
+            if (expandedItems.has(itemId)) {
+                newExpanded.delete(itemId);
+            } else {
+                newExpanded.add(itemId);
+            }
+            setExpandedItems(newExpanded);
+        } else if (itemId === 'addClass') {
+            navigate('/addClass');
+        } else if (itemId === 'profile') {
+            navigate('/profile');
+        } else if (itemId === 'about') {
+            navigate('/about');
         } else {
-        setActiveItem(itemId);
+            setActiveItem(itemId);
         }
     };
+
+    const handleClassSelect = (classItem, parentId) => {
+        // const classId = classItem.id;
+        const className = classItem.class_name || classItem.class_code || classItem;
+        
+        // Navigate đến URL mới
+        navigate(`/home/${className}`);
+        
+        // Gọi callback để parent component xử lý
+        if (onClassSelect) {
+            onClassSelect(classItem, parentId);
+        }
+        
+        console.log(`Selected class: ${className} from ${parentId}`, classItem);
+    };
+
+    // Function để thêm lớp mới
+    const addNewClass = (className) => {
+        // Refresh classes list
+        fetchClasses();
+        
+        // Navigate đến lớp mới
+        navigate(`/home/${className}`);
+        
+        // Gọi callback nếu có
+        if (onAddClass) {
+            onAddClass(className);
+        }
+    };
+
+    // Expose function để parent component có thể gọi
+    window.addNewClassToSidebar = addNewClass;
 
     return (
     <>
@@ -105,17 +200,52 @@ export default function LeftSidebar({ activeItem, setActiveItem }) {
                     <button
                         onClick={() => handleItemClick(item.id)}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
-                        activeItem === item.id
+                        activeItem === item.id || activeItem?.startsWith(`${item.id}-`)
                             ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-700'
                             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                         }`}
                     >
-                        <span className={activeItem === item.id ? 'text-blue-700' : 'text-gray-400'}>
+                        <span className={activeItem === item.id || activeItem?.startsWith(`${item.id}-`) ? 'text-blue-700' : 'text-gray-400'}>
                         {item.icon}
                         </span>
-                        <span className="font-medium">{item.label}</span>
+                        <span className="font-medium flex-1">{item.label}</span>
+                        {/* Hiển thị mũi tên cho menu có submenu */}
+                        {(item.id === 'classes' || item.id === 'updateClass') && (
+                            <span className={`transition-transform duration-200 ${expandedItems.has(item.id) ? 'rotate-90' : ''}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </span>
+                        )}
                     </button>
 
+                    {/* Submenu cho các lớp */}
+                    {(item.id === 'classes' || item.id === 'updateClass') && expandedItems.has(item.id) && (
+                        <div className="ml-4 mt-2 space-y-1">
+                            {loading ? (
+                                <div className="px-4 py-2 text-sm text-gray-500">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 inline-block mr-2"></div>
+                                    Đang tải...
+                                </div>
+                            ) : (
+                                classes.map((classItem, index) => (
+                                    <button
+                                        key={classItem.class_name || `class-${index}`}
+                                        onClick={() => handleClassSelect(classItem, item.id)}
+                                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-left transition-colors duration-200 ${
+                                            activeItem === `${item.id}-${classItem.class_name || classItem}` || 
+                                            (window.location.pathname.includes(classItem.class_name || classItem))
+                                                ? 'bg-blue-100 text-blue-800 border-l-2 border-blue-500'
+                                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                                        }`}
+                                    >
+                                        <span className="w-2 h-2 bg-gray-300 rounded-full"></span>
+                                        <span className="text-sm font-medium">{classItem.class_name || classItem}</span>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    )}
                 </div>
                 ))}
           </nav>

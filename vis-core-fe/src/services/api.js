@@ -241,3 +241,51 @@ export { getToken, getRefreshToken, getUserData, removeTokens, setUserData }
 export async function healthCheck() {
   return await apiRequest('/api/health/')
 }
+
+// Class API functions
+export const classAPI = {
+  // Get all classes for current teacher
+  async getClasses() {
+    return await apiRequest('/api/classes/')
+  },
+
+  // Create new class
+  async createClass(classData) {
+    return await apiRequest('/api/classes/', {
+      method: 'POST',
+      body: JSON.stringify({
+        class_name: classData.class_name,
+        number_of_student: parseInt(classData.number_of_student),
+        class_major: classData.class_major,
+        teacher_note: classData.teacher_note,
+        total_credit: parseInt(classData.total_credit),
+        total_semester: parseInt(classData.total_semester)
+      }),
+    })
+  },
+
+  // Get class details
+  async getClassDetail(classId) {
+    return await apiRequest(`/api/classes/${classId}/`)
+  },
+
+  // Update class
+  async updateClass(classId, classData) {
+    return await apiRequest(`/api/classes/${classId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(classData),
+    })
+  },
+
+  // Delete class
+  async deleteClass(classId) {
+    return await apiRequest(`/api/classes/${classId}/`, {
+      method: 'DELETE',
+    })
+  },
+
+  // Get students in a class
+  async getClassStudents(classId) {
+    return await apiRequest(`/api/classes/${classId}/students/`)
+  }
+}

@@ -1,4 +1,11 @@
 export default function UpdateClass() {
+  const classes = [
+    { id: 'KHDL15A', name: 'Khoa học Dữ liệu 15A', faculty: 'Khoa Học Dữ Liệu', students: 60, status: 'Đang học' },
+    { id: 'DHKHMT18B', name: 'Khoa học máy tính 18B', faculty: 'Công Nghệ Thông Tin', students: 55, status: 'Đang học' },
+    { id: 'DHKTPM19A', name: 'Kỹ thuật phần mềm 19A', faculty: 'Công Nghệ Thông Tin', students: 48, status: 'Đang học' },
+    { id: 'DHCNTT20B', name: 'Công nghệ thông tin 20B', faculty: 'Công Nghệ Thông Tin', students: 52, status: 'Đang học' }
+  ];
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center gap-3 mb-6">
@@ -45,44 +52,27 @@ export default function UpdateClass() {
                 </tr>
             </thead>
             <tbody>
-                <tr className="hover:bg-gray-50">
-                    <td className="border border-gray-200 px-4 py-3 text-sm text-center text-gray-700">KHDL15A</td>
-                    <td className="border border-gray-200 px-4 py-3 text-sm text-center font-medium text-gray-700">Khoa học Dữ liệu 15A</td>
-                    <td className="border border-gray-200 px-4 py-3 text-sm text-center text-gray-700">Khoa Học Dữ Liệu</td>
-                    <td className="border border-gray-200 px-4 py-3 text-sm text-center text-gray-700">60</td>
-                    <td className="border border-gray-200 px-4 py-3">
-                        <span className="bg-green-100 text-green-800 text-xs text-center px-2 py-1 rounded-full">Đang học</span>
-                    </td>
-                    <td className="border border-gray-200 px-4 py-3 text-center">
-                        <div className="flex gap-2 justify-center">
-                        <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors">
-                            Sửa
-                        </button>
-                        <button className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors">
-                            Xóa
-                        </button>
-                        </div>
-                    </td>
-                </tr>
-                {/* <tr className="hover:bg-gray-50">
-                <td className="border border-gray-200 px-4 py-3 text-sm">KHDL15B</td>
-                <td className="border border-gray-200 px-4 py-3 text-sm font-medium">Khoa Học Dữ Liệu 15B</td>
-                <td className="border border-gray-200 px-4 py-3 text-sm">Khoa Học Dữ Liệu</td>
-                <td className="border border-gray-200 px-4 py-3 text-sm">55</td>
-                <td className="border border-gray-200 px-4 py-3">
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Đang học</span>
-                </td>
-                <td className="border border-gray-200 px-4 py-3 text-center">
-                    <div className="flex gap-2 justify-center">
-                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors">
-                        Sửa
-                    </button>
-                    <button className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors">
-                        Xóa
-                    </button>
-                    </div>
-                </td>
-                </tr> */}
+                {classes.map((cls) => (
+                    <tr key={cls.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-4 py-3 text-sm text-center text-gray-700">{cls.id}</td>
+                        <td className="border border-gray-200 px-4 py-3 text-sm text-center font-medium text-gray-700">{cls.name}</td>
+                        <td className="border border-gray-200 px-4 py-3 text-sm text-center text-gray-700">{cls.faculty}</td>
+                        <td className="border border-gray-200 px-4 py-3 text-sm text-center text-gray-700">{cls.students}</td>
+                        <td className="border border-gray-200 px-4 py-3">
+                            <span className="bg-green-100 text-green-800 text-xs text-center px-2 py-1 rounded-full">{cls.status}</span>
+                        </td>
+                        <td className="border border-gray-200 px-4 py-3 text-center">
+                            <div className="flex gap-2 justify-center">
+                            <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors">
+                                Sửa
+                            </button>
+                            <button className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors">
+                                Xóa
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
             </tbody>
         </table>
     </div>
