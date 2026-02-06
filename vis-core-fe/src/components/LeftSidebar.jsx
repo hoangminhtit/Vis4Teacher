@@ -30,13 +30,6 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
             setClasses(response || []);
         } catch (error) {
             console.error('Error fetching classes:', error);
-            // Fallback to default classes
-            setClasses([
-                { class_name: 'DHKHDL17A' },
-                { class_name: 'DHKHMT18B' },
-                { class_name: 'DHKTPM19A' },
-                { class_name: 'DHCNTT20B' }
-            ]);
         } finally {
             setLoading(false);
         }
@@ -210,7 +203,7 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
                         </span>
                         <span className="font-medium flex-1">{item.label}</span>
                         {/* Hiển thị mũi tên cho menu có submenu */}
-                        {(item.id === 'classes' || item.id === 'updateClass') && (
+                        {(item.id === 'classes') && (
                             <span className={`transition-transform duration-200 ${expandedItems.has(item.id) ? 'rotate-90' : ''}`}>
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -219,8 +212,8 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
                         )}
                     </button>
 
-                    {/* Submenu cho các lớp */}
-                    {(item.id === 'classes' || item.id === 'updateClass') && expandedItems.has(item.id) && (
+                    {/* Submenu cho các lớp - chỉ hiển thị cho "Các lớp chủ nhiệm" */}
+                    {item.id === 'classes' && expandedItems.has(item.id) && (
                         <div className="ml-4 mt-2 space-y-1">
                             {loading ? (
                                 <div className="px-4 py-2 text-sm text-gray-500">

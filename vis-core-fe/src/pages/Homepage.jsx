@@ -9,13 +9,14 @@ import UpdateClass from "../components/UpdateClass.jsx";
 import AddClass from "../components/AddClass.jsx";
 import TeacherProfile from "../components/TeacherProfile.jsx";
 import AboutUs from "../components/AboutUs.jsx";
+import StudentManagement from "../components/StudentManagement.jsx";
 import { classAPI } from '../services/api';
 
 export default function Homepage() {
     const [activeItem, setActiveItem] = useState('classes');
     const [newClassAdded, setNewClassAdded] = useState(null);
     const [selectedClass, setSelectedClass] = useState(null);
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const { classCode } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
@@ -37,6 +38,21 @@ export default function Homepage() {
         }
     };
 
+    const loadFirstClass = async () => {
+        try {
+            const classes = await classAPI.getClasses();
+            if (classes && classes.length > 0) {
+                // Tự động chuyển đến lớp đầu tiên
+                const firstClass = classes[0];
+                navigate(`/home/${firstClass.class_name}`);
+            }
+        } catch (error) {
+            console.error('Error loading first class:', error);
+            // Fallback - vẫn ở trang danh sách lớp nếu có lỗi
+            setActiveItem('classes');
+            setSelectedClass(null);
+        }
+    };
     
     // Effect để xử lý khi URL thay đổi
     useEffect(() => {
@@ -45,10 +61,14 @@ export default function Homepage() {
         if (classCode) {
             // Nếu có classCode trong URL, fetch thông tin lớp
             fetchClassDetails(classCode);
-            setActiveItem(`classes-${classCode}`);
+            if (pathname.startsWith('/students/')) {
+                setActiveItem(`students-${classCode}`);
+            } else {
+                setActiveItem(`classes-${classCode}`);
+            }
         } else if (pathname === '/home') {
-            setActiveItem('classes');
-            setSelectedClass(null);
+            // Tự động load lớp đầu tiên thay vì hiển thị danh sách
+            loadFirstClass();
         } else if (pathname === '/updateClass') {
             setActiveItem('updateClass');
             setSelectedClass(null);
@@ -65,7 +85,7 @@ export default function Homepage() {
             setActiveItem('classes');
             setSelectedClass(null);
         }
-    }, [classCode, location.pathname]);
+    }, [classCode, location.pathname, navigate]);
 
     const handleClassAdded = (classData) => {
         // Callback khi có lớp mới được tạo
@@ -148,11 +168,14 @@ export default function Homepage() {
 
                         {/* Action buttons */}
                         <div className="flex flex-wrap gap-4">
-                            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            <button 
+                                onClick={() => navigate(`/students/${selectedClass.class_name}`)}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            >
                                 <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
                                 </svg>
-                                Xem danh sách sinh viên
+                                Quản lý sinh viên
                             </button>
                             <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                                 <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,12 +189,6 @@ export default function Homepage() {
                                 </svg>
                                 Xuất báo cáo
                             </button>
-                            <button 
-                                className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-                                onClick={() => navigate('/home')}
-                            >
-                                Quay lại danh sách lớp
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -181,9 +198,23 @@ export default function Homepage() {
         // Hiển thị component dựa trên URL pathname
         const pathname = location.pathname;
         
+        if (pathname.startsWith('/students/')) {
+            return <StudentManagement className={classCode} />;
+        }
+        
+        // Nếu ở trang home nhưng chưa có classCode, hiển thị loading
+        if (pathname === '/home') {
+            return (
+                <div className="bg-white rounded-lg shadow p-6">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+                        <span className="ml-2 text-gray-600">Đang tải dashboard...</span>
+                    </div>
+                </div>
+            );
+        }
+        
         switch (pathname) {
-            case '/home':
-                return <ClassManagement onClassSelect={handleClassSelectFromManagement} />;
             case '/updateClass':
                 return <UpdateClass />;
             case '/addClass':
