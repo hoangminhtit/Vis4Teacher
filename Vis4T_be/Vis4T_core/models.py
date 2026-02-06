@@ -14,7 +14,7 @@ class User(AbstractUser):
         return self.username
 
 class UniversityClass(models.Model):
-    teacher_id = models.CharField(max_length=20, unique=True)
+    teacher_id = models.CharField(max_length=20)  # Removed unique=True
     class_name = models.CharField(max_length=255, unique=True, primary_key=True)
     number_of_student = models.IntegerField()
     class_major = models.CharField(max_length=30)

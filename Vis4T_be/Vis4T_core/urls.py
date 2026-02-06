@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/classes/', views.ClassListCreateView.as_view(), name='class_list_create'),
     path('api/classes/<str:class_name>/', views.ClassDetailView.as_view(), name='class_detail'),
     path('api/classes/<str:class_name>/students/', views.ClassStudentsView.as_view(), name='class_students'),
+    path('api/classes/<str:class_name>/upload-students/', views.UploadStudentsView.as_view(), name='upload_students'),
     
     # JWT simple views (backup)
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
