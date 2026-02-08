@@ -34,8 +34,11 @@ async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`
   const token = getToken()
   
-  const defaultHeaders = {
-    'Content-Type': 'application/json',
+  const defaultHeaders = {}
+  
+  // Only set Content-Type if not multipart/form-data (for file uploads)
+  if (!options.body || !(options.body instanceof FormData)) {
+    defaultHeaders['Content-Type'] = 'application/json'
   }
   
   if (token) {
@@ -70,10 +73,19 @@ async function apiRequest(endpoint, options = {}) {
     
     if (!response.ok) {
       let errorData = {}
+      let errorMessage = `HTTP error! status: ${response.status}`
+      
       try {
-        errorData = await response.json()
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          errorData = await response.json()
+        } else {
+          // If not JSON (like HTML error page), create a simple error
+          errorMessage = `Server error ${response.status}: ${response.statusText}`
+        }
       } catch (jsonError) {
         console.error('Failed to parse error response:', jsonError)
+        errorMessage = `Server error ${response.status}: ${response.statusText}`
       }
       
       // Chi tiết error message cho debugging
@@ -85,14 +97,13 @@ async function apiRequest(endpoint, options = {}) {
       })
       
       // Tạo error message từ response
-      let errorMessage = `HTTP error! status: ${response.status}`
       if (errorData.detail) {
         errorMessage = errorData.detail
       } else if (errorData.message) {
         errorMessage = errorData.message
       } else if (errorData.non_field_errors) {
         errorMessage = errorData.non_field_errors.join(', ')
-      } else if (typeof errorData === 'object') {
+      } else if (typeof errorData === 'object' && Object.keys(errorData).length > 0) {
         // Nếu có validation errors từ Django serializer
         const errors = Object.entries(errorData).map(([field, messages]) => {
           const messageArray = Array.isArray(messages) ? messages : [messages]
@@ -287,5 +298,18 @@ export const classAPI = {
   // Get students in a class
   async getClassStudents(classId) {
     return await apiRequest(`/api/classes/${classId}/students/`)
+  },
+
+  // Upload students from Excel file
+  async uploadStudents(className, file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('class_name', className)
+    
+    return await apiRequest(`/api/classes/${className}/upload-students/`, {
+      method: 'POST',
+      body: formData,
+      headers: {} // Remove Content-Type to let browser set it for multipart/form-data
+    })
   }
 }

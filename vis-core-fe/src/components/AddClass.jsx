@@ -1,12 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { classAPI } from '../services/api';
 
 export default function AddClass({ onClassAdded }) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     class_name: '',
-    number_of_student: '',
     class_major: '',
-    teacher_note: '',
     total_credit: '',
     total_semester: ''
   });
@@ -29,18 +29,32 @@ export default function AddClass({ onClassAdded }) {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    setSuccess(null);
 
     try {
-      // Kiểm tra dữ liệu bắt buộc (teacher_note không bắt buộc)
-      if (!formData.class_name || !formData.number_of_student || !formData.class_major || 
-          !formData.total_credit || !formData.total_semester) {
+      // Kiểm tra dữ liệu bắt buộc
+      if (!formData.class_name || !formData.class_major || !formData.total_credit || !formData.total_semester) {
         setError('Vui lòng điền đầy đủ thông tin bắt buộc!');
         setIsSubmitting(false);
         return;
       }
 
+      // Kiểm tra authentication trước khi gọi API
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        setTimeout(() => navigate('/login'), 2000);
+        setIsSubmitting(false);
+        return;
+      }
+
       // Gọi API để tạo lớp mới
-      const newClass = await classAPI.createClass(formData);
+      const newClass = await classAPI.createClass({
+        ...formData,
+        number_of_student: 50 // Default value
+      });
+
+      setSuccess('Tạo lớp mới thành công! Đang chuyển đến lớp...');
 
       // Thêm lớp mới vào sidebar (safely)
       try {
@@ -63,24 +77,28 @@ export default function AddClass({ onClassAdded }) {
       // Reset form
       setFormData({
         class_name: '',
-        number_of_student: '',
         class_major: '',
-        teacher_note: '',
         total_credit: '',
         total_semester: ''
       });
-
-      // Show success message
-      setSuccess('Tạo lớp mới thành công!');
       
-      // Auto clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (error) {
-      console.error('Error creating class:', error);
-      setError(error.message || 'Có lỗi xảy ra khi tạo lớp mới!');
-    } finally {
-      setIsSubmitting(false);
-    }
+      // Auto redirect to class management after 2 seconds
+      setTimeout(() => {
+        navigate(`/home/${newClass.class_name}`);
+      }, 2000);
+      } catch (error) {
+        console.error('Error creating class:', error);
+        if (error.message.includes('401')) {
+          setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          setTimeout(() => navigate('/login'), 2000);
+        } else if (error.message.includes('500')) {
+          setError('Lỗi server. Vui lòng kiểm tra kết nối backend và thử lại.');
+        } else {
+          setError(error.message || 'Có lỗi xảy ra khi tạo lớp mới!');
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
   };
 
   return (
@@ -102,14 +120,50 @@ export default function AddClass({ onClassAdded }) {
         {/* Error Message */}
         {error && (
             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-600">{error}</p>
+                <div className="flex">
+                    <svg className="w-5 h-5 text-red-400 mt-0.5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                        <h3 className="text-sm font-medium text-red-800">Có lỗi xảy ra</h3>
+                        <div className="mt-2 text-sm text-red-700">{error}</div>
+                        {error.includes('backend') && (
+                            <div className="mt-2 text-sm text-red-600">
+                                💡 Kiểm tra xem Django server đã được khởi động chưa (python manage.py runserver)
+                            </div>
+                        )}
+                        {error.includes('đăng nhập') && (
+                            <div className="mt-2">
+                                <button 
+                                    onClick={() => navigate('/login')}
+                                    className="text-sm text-red-700 underline hover:text-red-800"
+                                >
+                                    Đăng nhập lại
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         )}
         
         {/* Success Message */}
         {success && (
             <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-600">{success}</p>
+                <div className="flex items-center">
+                    <svg className="w-5 h-5 text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <div className="flex-1">
+                        <p className="text-green-800 font-medium">{success}</p>
+                        {success.includes('Đang chuyển') && (
+                            <div className="mt-2 flex items-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+                                <span className="text-green-600 text-sm">Đang chuyển hướng...</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         )}
         
@@ -204,48 +258,36 @@ export default function AddClass({ onClassAdded }) {
             </div>
         </div>
 
-        {/* Ghi chú giảng viên */}
-        <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ghi chú giảng viên
-            </label>
-            <textarea
-                name="teacher_note"
-                value={formData.teacher_note}
-                onChange={handleInputChange}
-                rows="4"
-                className="w-full px-4 py-2 text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Nhập ghi chú về lớp học (không bắt buộc)..."
-            ></textarea>
-        </div>
-
         {/* Buttons */}
-        <div className="flex gap-4 mt-8">
+        <div className="flex justify-center gap-4 mt-8">
             <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`px-6 py-2 rounded-lg transition-colors ${
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                     isSubmitting 
                         ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-green-600 text-white hover:bg-green-700'
                 }`}
             >
-                {isSubmitting ? 'Đang tạo...' : 'Tạo lớp mới'}
+                {isSubmitting ? 'Đang tạo...' : 'Thêm +'}
             </button>
+            
             <button
                 type="button"
                 disabled={isSubmitting}
-                className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                onClick={() => setFormData({
-                    class_name: '',
-                    number_of_student: '',
-                    class_major: '',
-                    teacher_note: '',
-                    total_credit: '',
-                    total_semester: ''
-                })}
+                className="bg-red-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                onClick={() => {
+                    setFormData({
+                        class_name: '',
+                        class_major: '',
+                        total_credit: '',
+                        total_semester: ''
+                    });
+                    setError(null);
+                    setSuccess(null);
+                }}
             >
-                Hủy bỏ
+                Hủy
             </button>
         </div>
       </form>
