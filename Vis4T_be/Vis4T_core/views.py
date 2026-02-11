@@ -13,6 +13,12 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework.parsers import MultiPartParser, FormParser
 import tempfile
 import os
+import hashlib
+import hmac
+import time
+import json
+from urllib.parse import urlencode
+from django.conf import settings
 from .serializers import (
     UserRegistrationSerializer, 
     UserLoginSerializer, 
@@ -144,39 +150,41 @@ class ClassListCreateView(generics.ListCreateAPIView):
     serializer_class = UniversityClassSerializer
     
     def get_queryset(self):
-        # Lấy hoặc tạo Teacher record
+        # Lấy hoặc tạo Teacher record dựa trên email
         try:
-            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+            teacher = Teacher.objects.get(email=self.request.user.email)
         except Teacher.DoesNotExist:
             # Tạo Teacher record tự động nếu chưa có
             teacher = Teacher.objects.create(
-                teacher_id=self.request.user.id,
+                teacher_id=f"T{self.request.user.id:06d}",  # T000001 format
+                email=self.request.user.email,
+                password="",  # Not used for auth
                 teacher_fullname=self.request.user.full_name or self.request.user.username,
                 year_of_birth=1990,  # default value
                 academic_title="Giảng viên", 
                 major="Chưa xác định",
                 gender="O",
                 number_of_current_class=0,
-                phone_number="",
-                user=self.request.user
+                phone_number=""
             )
-        return UniversityClass.objects.filter(teacher_id=teacher.teacher_id)
+        return UniversityClass.objects.filter(teacher=teacher)
     
     def perform_create(self, serializer):
         try:
-            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+            teacher = Teacher.objects.get(email=self.request.user.email)
         except Teacher.DoesNotExist:
             # Tạo Teacher record tự động nếu chưa có
             teacher = Teacher.objects.create(
-                teacher_id=self.request.user.id,
+                teacher_id=f"T{self.request.user.id:06d}",  # T000001 format
+                email=self.request.user.email,
+                password="",  # Not used for auth
                 teacher_fullname=self.request.user.full_name or self.request.user.username,
                 year_of_birth=1990,  # default value
                 academic_title="Giảng viên", 
                 major="Chưa xác định",
                 gender="O",
                 number_of_current_class=0,
-                phone_number="",
-                user=self.request.user
+                phone_number=""
             )
         
         # Validation: Check if class name already exists
@@ -185,7 +193,7 @@ class ClassListCreateView(generics.ListCreateAPIView):
             from rest_framework.exceptions import ValidationError
             raise ValidationError(f"Lớp '{class_name}' đã tồn tại!")
         
-        serializer.save(teacher_id=teacher.teacher_id)
+        serializer.save(teacher=teacher)
 
 class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
@@ -194,21 +202,22 @@ class ClassDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     def get_queryset(self):
         try:
-            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+            teacher = Teacher.objects.get(email=self.request.user.email)
         except Teacher.DoesNotExist:
             # Tạo Teacher record tự động nếu chưa có
             teacher = Teacher.objects.create(
-                teacher_id=self.request.user.id,
+                teacher_id=f"T{self.request.user.id:06d}",  # T000001 format
+                email=self.request.user.email,
+                password="",  # Not used for auth
                 teacher_fullname=self.request.user.full_name or self.request.user.username,
                 year_of_birth=1990,  # default value
                 academic_title="Giảng viên", 
                 major="Chưa xác định",
                 gender="O",
                 number_of_current_class=0,
-                phone_number="",
-                user=self.request.user
+                phone_number=""
             )
-        return UniversityClass.objects.filter(teacher_id=teacher.teacher_id)
+        return UniversityClass.objects.filter(teacher=teacher)
 
 class ClassStudentsView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -217,10 +226,10 @@ class ClassStudentsView(generics.ListAPIView):
     def get_queryset(self):
         class_name = self.kwargs['class_name']
         try:
-            teacher = Teacher.objects.get(teacher_id=self.request.user.id)
+            teacher = Teacher.objects.get(email=self.request.user.email)
             return Student.objects.filter(
                 class_name__class_name=class_name,
-                class_name__teacher_id=teacher.teacher_id
+                class_name__teacher=teacher
             )
         except Teacher.DoesNotExist:
             return Student.objects.none()
@@ -248,10 +257,10 @@ class UploadStudentsView(APIView):
             
             # Kiểm tra quyền của teacher
             try:
-                teacher = Teacher.objects.get(teacher_id=request.user.id)
+                teacher = Teacher.objects.get(email=request.user.email)
                 university_class = UniversityClass.objects.get(
                     class_name=class_name,
-                    teacher_id=teacher.teacher_id
+                    teacher=teacher
                 )
             except Teacher.DoesNotExist:
                 return Response(
@@ -355,5 +364,76 @@ class UploadStudentsView(APIView):
         except Exception as e:
             return Response(
                 {"error": f"Có lỗi xảy ra: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ClassDashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, class_name):
+        """
+        Generate Metabase dashboard URL for specific class
+        """
+        try:
+            # Verify teacher has permission to view this class
+            teacher = Teacher.objects.get(email=request.user.email)
+            university_class = UniversityClass.objects.get(
+                class_name=class_name,
+                teacher=teacher
+            )
+            
+            # Metabase configuration (thêm vào settings.py sau)
+            metabase_url = getattr(settings, 'METABASE_URL', 'http://localhost:3000')
+            dashboard_id = getattr(settings, 'METABASE_DASHBOARD_ID', '2')
+            secret_key = getattr(settings, 'METABASE_SECRET_KEY')
+            
+            # Parameters for the dashboard
+            params = {
+                'class_name_id': class_name
+            }
+                        
+            # Generate signed URL for Metabase embedding
+            payload = {
+                'resource': {'dashboard': int(dashboard_id)},
+                'params': params,
+                'exp': int(time.time()) + 600  # Expires in 10 minutes
+            }
+            
+            # Create JWT token for Metabase
+            payload_json = json.dumps(payload, separators=(',', ':'), sort_keys=True)
+            signature = hmac.new(
+                secret_key.encode('utf-8'),
+                payload_json.encode('utf-8'),
+                hashlib.sha256
+            ).hexdigest()
+            
+            # Simple embedding URL (for development)
+            # For production, use proper JWT signing
+            dashboard_url = f"{metabase_url}/embed/dashboard/{dashboard_id}?" + f"?text={class_name}"
+                        
+            return Response({
+                'dashboard_url': dashboard_url,
+                'class_name': class_name,
+                'class_info': {
+                    'class_name': university_class.class_name,
+                    'class_major': university_class.class_major,
+                    'number_of_student': university_class.number_of_student
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {"error": "Teacher not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except UniversityClass.DoesNotExist:
+            return Response(
+                {"error": "Class not found or you don't have permission to view this class"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"An error occurred: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

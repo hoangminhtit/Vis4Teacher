@@ -311,5 +311,10 @@ export const classAPI = {
       body: formData,
       headers: {} // Remove Content-Type to let browser set it for multipart/form-data
     })
+  },
+
+  // Get Metabase dashboard URL for a class
+  async getClassDashboard(classId) {
+    return await apiRequest(`/api/classes/${classId}/dashboard/`)
   }
 }

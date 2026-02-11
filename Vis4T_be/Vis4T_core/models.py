@@ -29,6 +29,9 @@ class Teacher(models.Model):
     number_of_current_class = models.IntegerField(default=0)
     phone_number = models.CharField(max_length=20)
 
+    class Meta:
+        db_table = 'teacher'
+
     def __str__(self):
         return f"Teacher: {self.teacher_fullname}"
 
@@ -48,6 +51,7 @@ class UniversityClass(models.Model):
     total_semester = models.IntegerField()
 
     class Meta:
+        db_table = 'university_class'
         ordering = ['class_name']
         verbose_name_plural = 'Classes'
 
@@ -58,6 +62,9 @@ class Subject(models.Model):
     subject_id = models.CharField(max_length=20, primary_key=True)
     subject_name = models.CharField(max_length=255)
     credit = models.IntegerField()
+
+    class Meta:
+        db_table = 'subject'
 
     def __str__(self):
         return f"{self.subject_id} - {self.subject_name}"
@@ -75,6 +82,9 @@ class Student(models.Model):
     subjects = models.ManyToManyField(Subject, through='Subject_student', related_name='students')
     rank = models.CharField(max_length=50, blank=True)
 
+    class Meta:
+        db_table = 'student'
+
     def __str__(self):
         return f"{self.student_id} - {self.student_name}"
 
@@ -84,6 +94,7 @@ class Subject_class(models.Model):
     semester_id = models.IntegerField()
 
     class Meta:
+        db_table = 'subject_class'
         unique_together = ('class_name', 'subject')
 
     def __str__(self):
@@ -95,6 +106,7 @@ class Subject_student(models.Model):
     score_10 = models.FloatField()
 
     class Meta:
+        db_table = 'subject_student'
         unique_together = ('student', 'subject')
 
     def __str__(self):
