@@ -117,7 +117,18 @@ async function apiRequest(endpoint, options = {}) {
       throw new Error(errorMessage)
     }
     
-    return await response.json()
+    // Handle 204 No Content (e.g., DELETE requests)
+    if (response.status === 204) {
+      return { success: true }
+    }
+    
+    // Check if response has content before parsing JSON
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
+    
+    return { success: true }
   } catch (error) {
     console.error('API Request failed:', error)
     throw error
@@ -157,8 +168,6 @@ export const authAPI = {
         password: userData.password,
         password_confirm: userData.password_confirm
       }
-      
-      console.log('Sending registration data:', cleanData) // Debug log
       
       const response = await apiRequest('/api/auth/register/', {
         method: 'POST',
@@ -316,5 +325,10 @@ export const classAPI = {
   // Get Metabase dashboard URL for a class
   async getClassDashboard(classId) {
     return await apiRequest(`/api/classes/${classId}/dashboard/`)
+  },
+
+  // Get Metabase dashboard URL for a student
+  async getStudentDashboard(studentId) {
+    return await apiRequest(`/api/students/${studentId}/dashboard/`)
   }
 }

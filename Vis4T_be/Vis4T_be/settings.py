@@ -186,3 +186,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Metabase Configuration
 METABASE_URL = os.getenv('METABASE_URL', 'http://localhost:3000')
 METABASE_SECRET_KEY = os.getenv('METABASE_SECRET_KEY')
+METABASE_DASHBOARD_ID = os.getenv('METABASE_DASHBOARD_ID', '2')  # Class dashboard
+METABASE_STUDENT_DASHBOARD_ID = os.getenv('METABASE_STUDENT_DASHBOARD_ID', '3')  # Student dashboard

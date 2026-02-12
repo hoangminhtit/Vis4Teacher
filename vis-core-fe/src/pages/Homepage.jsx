@@ -6,9 +6,11 @@ import Footer from "../components/Footer.jsx";
 import LeftSidebar from "../components/LeftSidebar.jsx";
 import UpdateClass from "../components/UpdateClass.jsx";
 import AddClass from "../components/AddClass.jsx";
+import DeleteClass from "../components/DeleteClass.jsx";
 import TeacherProfile from "../components/TeacherProfile.jsx";
 import AboutUs from "../components/AboutUs.jsx";
 import StudentManagement from "../components/StudentManagement.jsx";
+import StudentDashboard from "../components/StudentDashboard.jsx";
 import { classAPI } from '../services/api';
 
 export default function Homepage() {
@@ -19,7 +21,7 @@ export default function Homepage() {
     const [dashboardLoading, setDashboardLoading] = useState(false);
     const [dashboardError, setDashboardError] = useState('');
     const { user } = useAuth();
-    const { classCode } = useParams();
+    const { classCode, studentId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -63,7 +65,12 @@ export default function Homepage() {
     useEffect(() => {
         const pathname = location.pathname;
         
-        if (classCode) {
+        if (studentId) {
+            // Route cho individual student dashboard
+            setActiveItem(`student-${studentId}`);
+            setSelectedClass(null);
+            setDashboardUrl('');
+        } else if (classCode) {
             // Reset dashboard khi chuyển lớp
             setDashboardUrl('');
             setDashboardError('');
@@ -86,6 +93,9 @@ export default function Homepage() {
         } else if (pathname === '/addClass') {
             setActiveItem('addClass');
             setSelectedClass(null);
+        } else if (pathname === '/deleteClass') {
+            setActiveItem('deleteClass');
+            setSelectedClass(null);
         } else if (pathname === '/profile') {
             setActiveItem('profile');
             setSelectedClass(null);
@@ -96,18 +106,59 @@ export default function Homepage() {
             setActiveItem('classes');
             setSelectedClass(null);
         }
-    }, [classCode, location.pathname, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [classCode, studentId, location.pathname]);
 
     // Effect để tự động fetch dashboard khi selectedClass thay đổi  
     useEffect(() => {
         if (selectedClass && activeItem.startsWith('classes-')) {
             fetchDashboard(selectedClass);
         }
-    }, [selectedClass?.class_name]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedClass?.class_name, activeItem]);
+
+    // PostMessage listener để nhận navigation từ Metabase iframe
+    useEffect(() => {
+        const handleIframeMessage = (event) => {
+            // Kiểm tra origin để đảm bảo an toàn
+            if (event.origin !== 'http://localhost:3000' && 
+                !event.origin.includes('metabase') &&
+                !event.origin.includes('localhost')) {
+                return;
+            }
+
+            // Xử lý navigation message từ custom postMessage
+            if (event.data.type === 'NAVIGATE_TO_STUDENT') {
+                const studentId = event.data.studentId;
+                if (studentId) {
+                    navigate(`/student/${studentId}`);
+                }
+            }
+            
+            // Xử lý click từ Metabase iframe (metabase.location format)
+            if (event.data.metabase && event.data.metabase.type === 'location') {
+                const locationData = event.data.metabase.location;
+                if (locationData && locationData.href) {
+                    // Parse student_id từ URL
+                    // Format: http://localhost:3000/dashboard/3?student_id=20011661
+                    const url = new URL(locationData.href);
+                    const studentId = url.searchParams.get('student_id');
+                    
+                    if (studentId) {
+                        navigate(`/student/${studentId}`);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('message', handleIframeMessage);
+        return () => {
+            window.removeEventListener('message', handleIframeMessage);
+        };
+    }, [navigate]);
 
     const handleClassAdded = (classData) => {
         // Callback khi có lớp mới được tạo
-        console.log('New class added:', classData);
         setNewClassAdded(classData.class_code || classData.classCode);
         
         // Reset sau 1 giây để tránh re-render liên tục
@@ -118,10 +169,14 @@ export default function Homepage() {
         // Xử lý khi chọn lớp từ sidebar
         setSelectedClass(classItem);
         setActiveItem(`${parentId}-${classItem.class_code}`);
-        console.log('Class selected:', classItem);
     };
 
     const renderMainContent = () => {
+        // Nếu có studentId trong URL, hiển thị dashboard của student đó
+        if (studentId) {
+            return <StudentDashboard />;
+        }
+        
         // Nếu có classCode trong URL, hiển thị dashboard của lớp đó
         if (classCode && selectedClass) {
             return (
@@ -155,6 +210,7 @@ export default function Homepage() {
                                     </div>
                                 ) : dashboardUrl ? (
                                     <iframe
+                                        id="metabase-iframe"
                                         src={dashboardUrl}
                                         width="100%"
                                         height="100%"
@@ -213,6 +269,8 @@ export default function Homepage() {
                 return <UpdateClass />;
             case '/addClass':
                 return <AddClass onClassAdded={handleClassAdded} />;
+            case '/deleteClass':
+                return <DeleteClass />;
             case '/profile':
                 return <TeacherProfile />;
             case '/about':
@@ -232,7 +290,7 @@ export default function Homepage() {
                     activeItem={activeItem} 
                     setActiveItem={setActiveItem} 
                     newClassAdded={newClassAdded}
-                    onAddClass={(className) => console.log(`Class added from sidebar: ${className}`)}
+                    onAddClass={() => {}}
                     onClassSelect={handleClassSelect}
                 />
                 <main className="flex-1 p-6 bg-gray-50">

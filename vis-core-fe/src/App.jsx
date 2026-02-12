@@ -33,12 +33,22 @@ function App() {
               <Homepage />
             </ProtectedRoute>
           } />
+          <Route path="/student/:studentId" element={
+            <ProtectedRoute>
+              <Homepage />
+            </ProtectedRoute>
+          } />
           <Route path="/updateClass" element={
             <ProtectedRoute>
               <Homepage />
             </ProtectedRoute>
           } />
           <Route path="/addClass" element={
+            <ProtectedRoute>
+              <Homepage />
+            </ProtectedRoute>
+          } />
+          <Route path="/deleteClass" element={
             <ProtectedRoute>
               <Homepage />
             </ProtectedRoute>

@@ -25,6 +25,10 @@ urlpatterns = [
     path('api/classes/<str:class_name>/upload-students/', views.UploadStudentsView.as_view(), name='upload_students'),
     path('api/classes/<str:class_name>/dashboard/', views.ClassDashboardView.as_view(), name='class_dashboard'),
     
+    # Student dashboard
+    path('api/students/<str:student_id>/dashboard/', views.StudentDashboardView.as_view(), name='student_dashboard'),
+    path('api/students/<str:student_id>/redirect/', views.StudentRedirectView.as_view(), name='student_redirect'),
+    
     # JWT simple views (backup)
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

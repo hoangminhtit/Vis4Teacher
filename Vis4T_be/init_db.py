@@ -44,55 +44,54 @@ khdl16a, created = UniversityClass.objects.get_or_create(
     }
 )
 
-# Comment out các lớp khác để chỉ focus vào KHDL16A
-# khdl15a, created = UniversityClass.objects.get_or_create(
-#     class_name = 'KHDL15A',
-#     defaults={
-#         'teacher': t2,
-#         'class_major': 'Khoa Học Dữ Liệu', 
-#         'total_semester': 8,
-#         'total_credit': 146
-#     }
-# )
+khdl15a, created = UniversityClass.objects.get_or_create(
+    class_name = 'KHDL15A',
+    defaults={
+        'teacher': t2,
+        'class_major': 'Khoa Học Dữ Liệu', 
+        'total_semester': 8,
+        'total_credit': 146
+    }
+)
 
-# khmt13a, created = UniversityClass.objects.get_or_create(
-#     class_name = 'KHMT13A',
-#     defaults={
-#         'teacher': t2,
-#         'class_major': 'Khoa Học Máy Tính',
-#         'total_semester': 8,
-#         'total_credit': 148
-#     }
-# )
+khmt13a, created = UniversityClass.objects.get_or_create(
+    class_name = 'KHMT13A',
+    defaults={
+        'teacher': t2,
+        'class_major': 'Khoa Học Máy Tính',
+        'total_semester': 8,
+        'total_credit': 148
+    }
+)
 
-# khmt14a, created = UniversityClass.objects.get_or_create(
-#     class_name = 'KHMT14A',
-#     defaults={
-#         'teacher': t1,
-#         'number_of_student': 72,
-#         'class_major': 'Khoa Học Máy Tính',
-#         'total_semester': 8,
-#         'total_credit': 128,
-#         'is_active': False
-#     }
-# )
+khmt14a, created = UniversityClass.objects.get_or_create(
+    class_name = 'KHMT14A',
+    defaults={
+        'teacher': t1,
+        'number_of_student': 72,
+        'class_major': 'Khoa Học Máy Tính',
+        'total_semester': 8,
+        'total_credit': 128,
+        'is_active': False
+    }
+)
 
-# with open('./data/KHMT14A.json', 'r', encoding='utf-8') as f:
-#     student_data = json.load(f)
-#     for i in student_data:
-#         s, created = Student.objects.get_or_create(
-#             student_id = i['student_id'],
-#             defaults={
-#                 'class_name': khmt14a,
-#                 'student_name': i['student_name'],
-#                 'student_gmail': i['student_gmail'],
-#                 'passed_credit': i['passed_credit'],
-#                 'score_10': i['score_10'],
-#                 'score_4': i['score_4'],
-#                 'score_char': i['score_char'],
-#                 'rank': i['rank']
-#             }
-#         )
+with open('./data/KHMT14A.json', 'r', encoding='utf-8') as f:
+    student_data = json.load(f)
+    for i in student_data:
+        s, created = Student.objects.get_or_create(
+            student_id = i['student_id'],
+            defaults={
+                'class_name': khmt14a,
+                'student_name': i['student_name'],
+                'student_gmail': i['student_gmail'],
+                'passed_credit': i['passed_credit'],
+                'score_10': i['score_10'],
+                'score_4': i['score_4'],
+                'score_char': i['score_char'],
+                'rank': i['rank']
+            }
+        )
     
         
 
@@ -115,45 +114,45 @@ with open('./data/KHDL16A.json', 'r', encoding='utf-8') as f:
     khdl16a.number_of_student = len(student_data)
     khdl16a.save()
 
-# with open('./data/KHMT13A.json', 'r', encoding='utf-8') as f:
-#     student_data = json.load(f)
-#     for i in student_data:
-#         s, created = Student.objects.get_or_create(
-#             student_id = i['student_id'],
-#             defaults={
-#                 'class_name': khmt13a,
-#                 'student_name': i['student_name'],
-#                 'student_gmail': i['student_gmail'],
-#                 'passed_credit': i['passed_credit'],
-#                 'score_10': i['score_10'],
-#                 'score_4': i['score_4'],
-#                 'score_char': i['score_char'],
-#                 'rank': i['rank']
-#             }
-#         )
-#     khmt13a.number_of_student = len(student_data)
-#     khmt13a.save()
+with open('./data/KHMT13A.json', 'r', encoding='utf-8') as f:
+    student_data = json.load(f)
+    for i in student_data:
+        s, created = Student.objects.get_or_create(
+            student_id = i['student_id'],
+            defaults={
+                'class_name': khmt13a,
+                'student_name': i['student_name'],
+                'student_gmail': i['student_gmail'],
+                'passed_credit': i['passed_credit'],
+                'score_10': i['score_10'],
+                'score_4': i['score_4'],
+                'score_char': i['score_char'],
+                'rank': i['rank']
+            }
+        )
+    khmt13a.number_of_student = len(student_data)
+    khmt13a.save()
 
 
 
-# with open('./data/KHDL15A.json', 'r', encoding='utf-8') as f:
-#     student_data = json.load(f)
-#     for i in student_data:
-#         s, created = Student.objects.get_or_create(
-#             student_id = i['student_id'],
-#             defaults={
-#                 'class_name': khdl15a,
-#                 'student_name': i['student_name'],
-#                 'student_gmail': i['student_gmail'],
-#                 'passed_credit': i['passed_credit'],
-#                 'score_10': i['score_10'],
-#                 'score_4': i['score_4'],
-#                 'score_char': i['score_char'],
-#                 'rank': i['rank']
-#             }
-#         )
-#     khdl15a.number_of_student = len(student_data)
-#     khdl15a.save()
+with open('./data/KHDL15A.json', 'r', encoding='utf-8') as f:
+    student_data = json.load(f)
+    for i in student_data:
+        s, created = Student.objects.get_or_create(
+            student_id = i['student_id'],
+            defaults={
+                'class_name': khdl15a,
+                'student_name': i['student_name'],
+                'student_gmail': i['student_gmail'],
+                'passed_credit': i['passed_credit'],
+                'score_10': i['score_10'],
+                'score_4': i['score_4'],
+                'score_char': i['score_char'],
+                'rank': i['rank']
+            }
+        )
+    khdl15a.number_of_student = len(student_data)
+    khdl15a.save()
         
 with open("./data/subjects.json", 'r', encoding='utf-8') as f:
     subjects_data = json.load(f)
@@ -190,8 +189,8 @@ for k in subject_class_data:
         print(f"Class {k} not found, skipping subjects for this class...")
         continue
         
-# class_name = ['KHMT13A', 'KHDL16A', 'KHDL15A']
-class_names = ['KHDL16A']
+class_names = ['KHMT13A', 'KHDL16A', 'KHDL15A']
+# class_names = ['KHDL16A']
 
 for class_name in class_names:
     print(f"Processing class: {class_name}")
