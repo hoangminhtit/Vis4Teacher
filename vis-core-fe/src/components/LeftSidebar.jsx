@@ -2,56 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classAPI } from '../services/api';
 
-export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, newClassAdded, onClassSelect }) {
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
-    const [expandedItems, setExpandedItems] = useState(new Set());
-    const [classes, setClasses] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-
-    // Effect để lắng nghe khi có lớp mới được thêm
-    useEffect(() => {
-        if (newClassAdded) {
-            fetchClasses();
-        }
-    }, [newClassAdded]);
-
-    // Fetch classes from API
-    useEffect(() => {
-        if (expandedItems.has('classes') || expandedItems.has('updateClass')) {
-            fetchClasses();
-        }
-    }, [expandedItems]);
-
-    const fetchClasses = async () => {
-        try {
-            setLoading(true);
-            const response = await classAPI.getClasses();
-            setClasses(response || []);
-        } catch (error) {
-            console.error('Error fetching classes:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLogout = () => {
-        // Xóa thông tin xác thực từ localStorage/sessionStorage
-        localStorage.removeItem('token');
-        localStorage.removeItem('userInfo');
-        sessionStorage.removeItem('token');
-        sessionStorage.removeItem('userInfo');
-        
-        // Điều hướng về trang login
-        navigate('/login');
-    };
-
-    const confirmLogout = () => {
-        setShowLogoutModal(false);
-        handleLogout();
-    };
-
-    const menuItems = [
+// Menu items định nghĩa ngoài component để tránh recreate mỗi lần render
+const MENU_ITEMS = [
     {
         id: 'classes',
         label: 'Các lớp chủ nhiệm',
@@ -80,6 +32,16 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+        )
+    },
+    {
+        id: 'deleteClass',
+        label: 'Xóa lớp',
+        icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
         )
     },
@@ -113,7 +75,58 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
             </svg>
         )
     }
-    ];
+];
+
+export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, newClassAdded, onClassSelect }) {
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [expandedItems, setExpandedItems] = useState(new Set());
+    const [classes, setClasses] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [hasFetched, setHasFetched] = useState(false);
+    const navigate = useNavigate();
+
+
+    // Effect để lắng nghe khi có lớp mới được thêm
+    useEffect(() => {
+        if (newClassAdded) {
+            fetchClasses();
+        }
+    }, [newClassAdded]);
+
+    // Fetch classes from API - chỉ fetch 1 lần khi expand lần đầu
+    useEffect(() => {
+        if ((expandedItems.has('classes') || expandedItems.has('updateClass')) && !hasFetched) {
+            fetchClasses();
+        }
+    }, [expandedItems, hasFetched]);
+
+    const fetchClasses = async () => {
+        try {
+            setLoading(true);
+            const response = await classAPI.getClasses();
+            setClasses(response || []);
+            setHasFetched(true);
+        } catch (error) {
+            console.error('Error fetching classes:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLogout = () => {
+        // Xóa thông tin xác thực từ localStorage (thống nhất với api.js)
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_data');
+        
+        // Điều hướng về trang login
+        navigate('/login');
+    };
+
+    const confirmLogout = () => {
+        setShowLogoutModal(false);
+        handleLogout();
+    };
 
     const handleItemClick = (itemId) => {
         if (itemId === 'logout') {
@@ -140,6 +153,8 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
             setExpandedItems(newExpanded);
         } else if (itemId === 'addClass') {
             navigate('/addClass');
+        } else if (itemId === 'deleteClass') {
+            navigate('/deleteClass');
         } else if (itemId === 'profile') {
             navigate('/profile');
         } else if (itemId === 'about') {
@@ -160,8 +175,6 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
         if (onClassSelect) {
             onClassSelect(classItem, parentId);
         }
-        
-        console.log(`Selected class: ${className} from ${parentId}`, classItem);
     };
 
     // Function để thêm lớp mới
@@ -188,7 +201,7 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
             <h2 className="text-lg font-semibold text-gray-800 mb-6">Menu chính</h2>
             
             <nav className="space-y-2">
-                {menuItems.map((item) => (
+                {MENU_ITEMS.map((item) => (
                 <div key={item.id}>
                     <button
                         onClick={() => handleItemClick(item.id)}

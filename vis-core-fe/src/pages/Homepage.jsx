@@ -4,20 +4,24 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from "../components/navBar.jsx";
 import Footer from "../components/Footer.jsx";
 import LeftSidebar from "../components/LeftSidebar.jsx";
-import ClassManagement from "../components/ClassManagement.jsx";
 import UpdateClass from "../components/UpdateClass.jsx";
 import AddClass from "../components/AddClass.jsx";
+import DeleteClass from "../components/DeleteClass.jsx";
 import TeacherProfile from "../components/TeacherProfile.jsx";
 import AboutUs from "../components/AboutUs.jsx";
 import StudentManagement from "../components/StudentManagement.jsx";
+import StudentDashboard from "../components/StudentDashboard.jsx";
 import { classAPI } from '../services/api';
 
 export default function Homepage() {
     const [activeItem, setActiveItem] = useState('classes');
     const [newClassAdded, setNewClassAdded] = useState(null);
     const [selectedClass, setSelectedClass] = useState(null);
+    const [dashboardUrl, setDashboardUrl] = useState('');
+    const [dashboardLoading, setDashboardLoading] = useState(false);
+    const [dashboardError, setDashboardError] = useState('');
     const { user } = useAuth();
-    const { classCode } = useParams();
+    const { classCode, studentId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -38,19 +42,22 @@ export default function Homepage() {
         }
     };
 
-    const loadFirstClass = async () => {
+    // Không tự động load lớp đầu tiên nữa - chỉ hiển thị trang chủ
+
+    const fetchDashboard = async (classData) => {
+        if (!classData?.class_name) return;
+        
+        setDashboardLoading(true);
+        setDashboardError('');
+        
         try {
-            const classes = await classAPI.getClasses();
-            if (classes && classes.length > 0) {
-                // Tự động chuyển đến lớp đầu tiên
-                const firstClass = classes[0];
-                navigate(`/home/${firstClass.class_name}`);
-            }
+            const response = await classAPI.getClassDashboard(classData.class_name);
+            setDashboardUrl(response.dashboard_url);
         } catch (error) {
-            console.error('Error loading first class:', error);
-            // Fallback - vẫn ở trang danh sách lớp nếu có lỗi
-            setActiveItem('classes');
-            setSelectedClass(null);
+            console.error('Error fetching dashboard:', error);
+            setDashboardError('Không thể tải dashboard. Vui lòng thử lại sau.');
+        } finally {
+            setDashboardLoading(false);
         }
     };
     
@@ -58,7 +65,16 @@ export default function Homepage() {
     useEffect(() => {
         const pathname = location.pathname;
         
-        if (classCode) {
+        if (studentId) {
+            // Route cho individual student dashboard
+            setActiveItem(`student-${studentId}`);
+            setSelectedClass(null);
+            setDashboardUrl('');
+        } else if (classCode) {
+            // Reset dashboard khi chuyển lớp
+            setDashboardUrl('');
+            setDashboardError('');
+            
             // Nếu có classCode trong URL, fetch thông tin lớp
             fetchClassDetails(classCode);
             if (pathname.startsWith('/students/')) {
@@ -67,13 +83,18 @@ export default function Homepage() {
                 setActiveItem(`classes-${classCode}`);
             }
         } else if (pathname === '/home') {
-            // Tự động load lớp đầu tiên thay vì hiển thị danh sách
-            loadFirstClass();
+            // Hiển thị trang chủ mặc định
+            setActiveItem('home');
+            setSelectedClass(null);
+            setDashboardUrl('');
         } else if (pathname === '/updateClass') {
             setActiveItem('updateClass');
             setSelectedClass(null);
         } else if (pathname === '/addClass') {
             setActiveItem('addClass');
+            setSelectedClass(null);
+        } else if (pathname === '/deleteClass') {
+            setActiveItem('deleteClass');
             setSelectedClass(null);
         } else if (pathname === '/profile') {
             setActiveItem('profile');
@@ -85,11 +106,59 @@ export default function Homepage() {
             setActiveItem('classes');
             setSelectedClass(null);
         }
-    }, [classCode, location.pathname, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [classCode, studentId, location.pathname]);
+
+    // Effect để tự động fetch dashboard khi selectedClass thay đổi  
+    useEffect(() => {
+        if (selectedClass && activeItem.startsWith('classes-')) {
+            fetchDashboard(selectedClass);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedClass?.class_name, activeItem]);
+
+    // PostMessage listener để nhận navigation từ Metabase iframe
+    useEffect(() => {
+        const handleIframeMessage = (event) => {
+            // Kiểm tra origin để đảm bảo an toàn
+            if (event.origin !== 'http://localhost:3000' && 
+                !event.origin.includes('metabase') &&
+                !event.origin.includes('localhost')) {
+                return;
+            }
+
+            // Xử lý navigation message từ custom postMessage
+            if (event.data.type === 'NAVIGATE_TO_STUDENT') {
+                const studentId = event.data.studentId;
+                if (studentId) {
+                    navigate(`/student/${studentId}`);
+                }
+            }
+            
+            // Xử lý click từ Metabase iframe (metabase.location format)
+            if (event.data.metabase && event.data.metabase.type === 'location') {
+                const locationData = event.data.metabase.location;
+                if (locationData && locationData.href) {
+                    // Parse student_id từ URL
+                    // Format: http://localhost:3000/dashboard/3?student_id=20011661
+                    const url = new URL(locationData.href);
+                    const studentId = url.searchParams.get('student_id');
+                    
+                    if (studentId) {
+                        navigate(`/student/${studentId}`);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('message', handleIframeMessage);
+        return () => {
+            window.removeEventListener('message', handleIframeMessage);
+        };
+    }, [navigate]);
 
     const handleClassAdded = (classData) => {
         // Callback khi có lớp mới được tạo
-        console.log('New class added:', classData);
         setNewClassAdded(classData.class_code || classData.classCode);
         
         // Reset sau 1 giây để tránh re-render liên tục
@@ -100,97 +169,69 @@ export default function Homepage() {
         // Xử lý khi chọn lớp từ sidebar
         setSelectedClass(classItem);
         setActiveItem(`${parentId}-${classItem.class_code}`);
-        console.log('Class selected:', classItem);
-    };
-
-    const handleClassSelectFromManagement = (classItem) => {
-        // Xử lý khi click vào lớp từ ClassManagement
-        navigate(`/home/${classItem.class_code}`);
     };
 
     const renderMainContent = () => {
+        // Nếu có studentId trong URL, hiển thị dashboard của student đó
+        if (studentId) {
+            return <StudentDashboard />;
+        }
+        
         // Nếu có classCode trong URL, hiển thị dashboard của lớp đó
         if (classCode && selectedClass) {
             return (
                 <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-800">Dashboard Điểm - {selectedClass.class_code}</h1>
-                            <p className="text-gray-600">Thống kê và trực quan hóa điểm số cho lớp {selectedClass.class_name}</p>
-                        </div>
-                    </div>
-                    
-                    <div className="space-y-6">
-                        {/* Stats Overview */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="bg-blue-50 p-4 rounded-lg">
-                                <h3 className="font-semibold text-blue-800">Tổng sinh viên</h3>
-                                <p className="text-2xl font-bold text-blue-900">{selectedClass.current_students || 60}</p>
-                                <p className="text-sm text-blue-600">/{selectedClass.max_students || 65} sinh viên</p>
+                    {/* Metabase Dashboard */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Biểu đồ phân bố điểm - {selectedClass?.class_name}</h3>
+                            <div className="border border-gray-200 rounded-lg" style={{ height: 'calc(100vh - 220px)', minHeight: '600px' }}>
+                                {dashboardLoading ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <div className="text-center">
+                                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                            <p className="text-gray-500">Đang tải dashboard...</p>
+                                        </div>
+                                    </div>
+                                ) : dashboardError ? (
+                                    <div className="h-full flex items-center justify-center">
+                                        <div className="text-center">
+                                            <svg className="w-12 h-12 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+                                            </svg>
+                                            <p className="text-red-500 font-medium">{dashboardError}</p>
+                                            <button 
+                                                onClick={() => fetchDashboard(selectedClass)}
+                                                className="mt-2 text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                                            >
+                                                Thử lại
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : dashboardUrl ? (
+                                    <iframe
+                                        id="metabase-iframe"
+                                        src={dashboardUrl}
+                                        width="100%"
+                                        height="100%"
+                                        frameBorder="0"
+                                        allowFullScreen
+                                        title={`Dashboard ${selectedClass?.class_name}`}
+                                        className="rounded-lg"
+                                    />
+                                ) : (
+                                    <div className="h-full flex items-center justify-center">
+                                        <div className="text-center">
+                                            <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                            </svg>
+                                            <p className="text-gray-500">Chọn một lớp để xem dashboard</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="bg-green-50 p-4 rounded-lg">
-                                <h3 className="font-semibold text-green-800">Điểm TB lớp</h3>
-                                <p className="text-2xl font-bold text-green-900">7.2</p>
-                                <p className="text-sm text-green-600">điểm</p>
-                            </div>
-                            <div className="bg-yellow-50 p-4 rounded-lg">
-                                <h3 className="font-semibold text-yellow-800">Đạt yêu cầu</h3>
-                                <p className="text-2xl font-bold text-yellow-900">85%</p>
-                                <p className="text-sm text-yellow-600">sinh viên</p>
-                            </div>
-                            <div className="bg-purple-50 p-4 rounded-lg">
-                                <h3 className="font-semibold text-purple-800">Bài kiểm tra</h3>
-                                <p className="text-2xl font-bold text-purple-900">8</p>
-                                <p className="text-sm text-purple-600">đã hoàn thành</p>
-                            </div>
                         </div>
-
-                        {/* Chart placeholder */}
-                        <div className="bg-gray-50 rounded-lg p-6">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Biểu đồ phân bố điểm</h3>
-                            <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                                <div className="text-center">
-                                    <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                    </svg>
-                                    <p className="text-gray-500">Biểu đồ điểm số sẽ được hiển thị tại đây</p>
-                                    <p className="text-sm text-gray-400 mt-1">Chart.js/D3.js integration đang phát triển</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex flex-wrap gap-4">
-                            <button 
-                                onClick={() => navigate(`/students/${selectedClass.class_name}`)}
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                                <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                                </svg>
-                                Quản lý sinh viên
-                            </button>
-                            <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                                <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Nhập điểm mới
-                            </button>
-                            <button className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-                                <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Xuất báo cáo
-                            </button>
-                        </div>
-                    </div>
                 </div>
             );
         }
@@ -202,13 +243,22 @@ export default function Homepage() {
             return <StudentManagement className={classCode} />;
         }
         
-        // Nếu ở trang home nhưng chưa có classCode, hiển thị loading
+        // Trang chủ mặc định - hiển thị welcome page
         if (pathname === '/home') {
             return (
                 <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center justify-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-                        <span className="ml-2 text-gray-600">Đang tải dashboard...</span>
+                    <div className="text-center py-12">
+                        <svg className="w-20 h-20 mx-auto mb-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-4">Chào mừng đến với Vis4Teacher</h2>
+                        <p className="text-gray-600 mb-6">Hệ thống quản lý và phân tích điểm sinh viên</p>
+                        <div className="bg-orange-50 rounded-lg p-6 max-w-md mx-auto">
+                            <p className="text-gray-700">
+                                👈 Vui lòng chọn <strong>"Các lớp chủ nhiệm"</strong> ở menu bên trái và chọn lớp để xem thống kê điểm.
+                            </p>
+                        </div>
                     </div>
                 </div>
             );
@@ -219,12 +269,15 @@ export default function Homepage() {
                 return <UpdateClass />;
             case '/addClass':
                 return <AddClass onClassAdded={handleClassAdded} />;
+            case '/deleteClass':
+                return <DeleteClass />;
             case '/profile':
                 return <TeacherProfile />;
             case '/about':
                 return <AboutUs />;
             default:
-                return <ClassManagement onClassSelect={handleClassSelectFromManagement} />;
+                // Redirect to home nếu route không hợp lệ
+                return null;
         }
     };
 
@@ -237,7 +290,7 @@ export default function Homepage() {
                     activeItem={activeItem} 
                     setActiveItem={setActiveItem} 
                     newClassAdded={newClassAdded}
-                    onAddClass={(className) => console.log(`Class added from sidebar: ${className}`)}
+                    onAddClass={() => {}}
                     onClassSelect={handleClassSelect}
                 />
                 <main className="flex-1 p-6 bg-gray-50">

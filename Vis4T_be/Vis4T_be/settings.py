@@ -55,7 +55,7 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # Changed to AllowAny as default
     ],
 }
 
@@ -182,3 +182,9 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Metabase Configuration
+METABASE_URL = os.getenv('METABASE_URL', 'http://localhost:3000')
+METABASE_SECRET_KEY = os.getenv('METABASE_SECRET_KEY')
+METABASE_DASHBOARD_ID = os.getenv('METABASE_DASHBOARD_ID', '2')  # Class dashboard
+METABASE_STUDENT_DASHBOARD_ID = os.getenv('METABASE_STUDENT_DASHBOARD_ID', '3')  # Student dashboard
