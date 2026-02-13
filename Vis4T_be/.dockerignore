@@ -1,0 +1,32 @@
+# Backend .dockerignore
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Data
+data/
+*.sqlite3
+
+# Docs
+README.md
+*.md
+
+# Tests
+tests/
+*.test.py
