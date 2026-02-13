@@ -9,7 +9,6 @@ import AddClass from "../components/AddClass.jsx";
 import DeleteClass from "../components/DeleteClass.jsx";
 import TeacherProfile from "../components/TeacherProfile.jsx";
 import AboutUs from "../components/AboutUs.jsx";
-import StudentManagement from "../components/StudentManagement.jsx";
 import StudentDashboard from "../components/StudentDashboard.jsx";
 import { classAPI } from '../services/api';
 
@@ -239,10 +238,6 @@ export default function Homepage() {
         // Hiển thị component dựa trên URL pathname
         const pathname = location.pathname;
         
-        if (pathname.startsWith('/students/')) {
-            return <StudentManagement className={classCode} />;
-        }
-        
         // Trang chủ mặc định - hiển thị welcome page
         if (pathname === '/home') {
             return (
@@ -254,11 +249,6 @@ export default function Homepage() {
                         </svg>
                         <h2 className="text-2xl font-bold text-gray-800 mb-4">Chào mừng đến với Vis4Teacher</h2>
                         <p className="text-gray-600 mb-6">Hệ thống quản lý và phân tích điểm sinh viên</p>
-                        <div className="bg-orange-50 rounded-lg p-6 max-w-md mx-auto">
-                            <p className="text-gray-700">
-                                👈 Vui lòng chọn <strong>"Các lớp chủ nhiệm"</strong> ở menu bên trái và chọn lớp để xem thống kê điểm.
-                            </p>
-                        </div>
                     </div>
                 </div>
             );

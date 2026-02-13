@@ -18,17 +18,32 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
 
-  // Check for existing token on mount
+  // Check for existing token on mount and validate with backend
   useEffect(() => {
-    const userData = getUserData()
-    const isAuth = authAPI.isAuthenticated()
-    
-    if (isAuth && userData) {
-      setUser(userData)
-      setIsAuthenticated(true)
+    const validateAuth = async () => {
+      const userData = getUserData()
+      const hasToken = authAPI.isAuthenticated()
+      
+      if (hasToken && userData) {
+        try {
+          // Validate token bằng cách gọi API profile
+          const profileData = await authAPI.getProfile()
+          // Token hợp lệ, cập nhật user data với thông tin mới nhất từ server
+          setUser(profileData)
+          setIsAuthenticated(true)
+        } catch {
+          // Token không hợp lệ hoặc hết hạn, xóa dữ liệu cũ
+          console.log('Token validation failed, clearing auth data')
+          authAPI.logout()
+          setUser(null)
+          setIsAuthenticated(false)
+        }
+      }
+      
+      setIsInitializing(false) // Finished checking authentication
     }
     
-    setIsInitializing(false) // Finished checking authentication
+    validateAuth()
   }, [])
 
   const login = async (credentials) => {
