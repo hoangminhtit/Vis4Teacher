@@ -43,7 +43,6 @@ export default function UpdateClass() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Cập nhật điểm số</h1>
-          <p className="text-gray-600">Chọn lớp và upload file điểm</p>
         </div>
       </div>
 

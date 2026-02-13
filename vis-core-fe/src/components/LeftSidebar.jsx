@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { classAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 // Menu items định nghĩa ngoài component để tránh recreate mỗi lần render
 const MENU_ITEMS = [
@@ -84,6 +85,7 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
     const [loading, setLoading] = useState(false);
     const [hasFetched, setHasFetched] = useState(false);
     const navigate = useNavigate();
+    const { logout } = useAuth();
 
 
     // Effect để lắng nghe khi có lớp mới được thêm
@@ -113,19 +115,9 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
         }
     };
 
-    const handleLogout = () => {
-        // Xóa thông tin xác thực từ localStorage (thống nhất với api.js)
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_data');
-        
-        // Điều hướng về trang login
-        navigate('/login');
-    };
-
     const confirmLogout = () => {
         setShowLogoutModal(false);
-        handleLogout();
+        logout(); // Sử dụng logout từ AuthContext
     };
 
     const handleItemClick = (itemId) => {
@@ -198,7 +190,6 @@ export default function LeftSidebar({ activeItem, setActiveItem, onAddClass, new
     <>
     <div className="w-64 bg-white border-r border-gray-200 shadow-sm">
         <div className="p-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-6">Menu chính</h2>
             
             <nav className="space-y-2">
                 {MENU_ITEMS.map((item) => (

@@ -1,11 +1,58 @@
-# dependencies
+# ===== DEPENDENCIES =====
 node_modules/
-
-
 __pycache__/
-.env
-__init__.py
-data
+*.pyc
+*.pyo
 
+# ===== ENVIRONMENT VARIABLES (IMPORTANT!) =====
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ===== PYTHON =====
+__init__.py
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+venv/
+.venv/
+ENV/
+
+# ===== DJANGO =====
 migrations/
 db.sqlite3
+staticfiles/
+media/
+
+# ===== DATA FILES =====
+data/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== LOGS =====
+*.log
+logs/
+
+# ===== BUILD =====
+dist/
+build/
+*.egg-info/
+
+# ===== DOCKER =====
+# Không ignore Dockerfile và docker-compose.yml

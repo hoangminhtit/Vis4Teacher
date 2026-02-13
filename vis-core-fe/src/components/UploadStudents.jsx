@@ -211,10 +211,10 @@ export default function UploadStudents({ className, onUploadSuccess }) {
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <h4 className="text-sm font-medium text-gray-900 mb-2">Định dạng file yêu cầu:</h4>
           <ul className="text-sm text-gray-600 space-y-1">
-            <li>• File Excel (.xlsx) hoặc CSV (.csv)</li>
-            <li>• Dữ liệu bắt đầu từ dòng 10 (bỏ qua 9 dòng đầu)</li>
-            <li>• Bỏ qua 2 dòng cuối file</li>
-            <li>• Các cột yêu cầu: Mã SV, Tên, Điểm hệ 10, Điểm hệ 4, Xếp loại...</li>
+            <li>- File Excel (.xlsx) hoặc CSV (.csv)</li>
+            <li>- Dữ liệu bắt đầu từ dòng 10 (bỏ qua 9 dòng đầu)</li>
+            <li>- Bỏ qua 2 dòng cuối file</li>
+            <li>- Các cột yêu cầu: Mã SV, Tên, Điểm hệ 10, Điểm hệ 4, Xếp loại...</li>
           </ul>
         </div>
       </div>

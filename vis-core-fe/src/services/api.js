@@ -1,5 +1,5 @@
 // API base configuration
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // Helper function to get token from localStorage
 const getToken = () => localStorage.getItem('access_token')
@@ -330,5 +330,32 @@ export const classAPI = {
   // Get Metabase dashboard URL for a student
   async getStudentDashboard(studentId) {
     return await apiRequest(`/api/students/${studentId}/dashboard/`)
+  },
+
+  // Search students across all classes (for teacher)
+  async searchStudents(query) {
+    // Lấy tất cả classes của teacher
+    const classes = await this.getClasses()
+    
+    // Lấy students từ tất cả classes
+    const studentsPromises = classes.map(cls => 
+      this.getClassStudents(cls.class_name).catch(() => [])
+    )
+    const studentsArrays = await Promise.all(studentsPromises)
+    
+    // Flatten và thêm thông tin class
+    const allStudents = studentsArrays.flatMap((students, index) => 
+      (students || []).map(student => ({
+        ...student,
+        class_name: classes[index].class_name
+      }))
+    )
+    
+    // Filter theo query (tìm theo ID hoặc tên)
+    const queryLower = query.toLowerCase().trim()
+    return allStudents.filter(student => 
+      student.student_id?.toLowerCase().includes(queryLower) ||
+      student.student_name?.toLowerCase().includes(queryLower)
+    ).slice(0, 10) // Giới hạn 10 kết quả
   }
 }
